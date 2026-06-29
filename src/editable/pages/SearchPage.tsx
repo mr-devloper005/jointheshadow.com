@@ -9,6 +9,8 @@ import { SITE_CONFIG, type TaskKey } from '@/lib/site-config'
 import type { SitePost } from '@/lib/site-connector'
 import { EditableSiteShell } from '@/editable/shell/EditableSiteShell'
 import { pagesContent } from '@/editable/content/pages.content'
+import { isUiHiddenTask } from '@/editable/content/global.content'
+import { Ads } from '@/lib/ads'
 
 export const revalidate = 3
 
@@ -58,19 +60,24 @@ function SearchResultCard({ post, index }: { post: SitePost; index: number }) {
   const strong = index % 5 === 0
 
   return (
-    <Link href={href} className={`group block overflow-hidden rounded-[2rem] border border-[var(--editable-border)] bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-2xl ${strong ? 'md:col-span-2' : ''}`}>
+    <Link
+      href={href}
+      data-reveal
+      style={{ ['--reveal-delay' as string]: `${(index % 6) * 60}ms` }}
+      className={`group block overflow-hidden rounded-[var(--editable-radius)] border border-[var(--editable-border)] bg-[var(--slot4-surface-bg)] shadow-[0_1px_2px_rgba(14,15,26,0.05),0_12px_32px_-12px_rgba(14,15,26,0.12)] transition duration-500 hover:-translate-y-1.5 hover:shadow-[0_30px_70px_-28px_rgba(14,15,26,0.5)] ${strong ? 'md:col-span-2' : ''}`}
+    >
       {image ? (
-        <div className={`relative overflow-hidden bg-black ${strong ? 'aspect-[16/7]' : 'aspect-[16/10]'}`}>
-          <img src={image} alt="" className="h-full w-full object-cover opacity-90 transition duration-500 group-hover:scale-105" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-          <span className="absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-black">{taskLabel}</span>
+        <div className={`relative overflow-hidden bg-[var(--slot4-media-bg)] ${strong ? 'aspect-[16/7]' : 'aspect-[16/10]'}`}>
+          <img src={image} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(14,15,26,0.05),rgba(14,15,26,0.55))]" />
+          <span className="absolute left-4 top-4 rounded-full bg-[var(--slot4-surface-bg)]/95 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--slot4-page-text)]">{taskLabel}</span>
         </div>
       ) : null}
       <div className="p-5 sm:p-6">
-        {!image ? <span className="rounded-full bg-[var(--editable-page-text,#211713)] px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-white">{taskLabel}</span> : null}
-        <h2 className="mt-4 line-clamp-3 text-2xl font-black leading-[0.95] tracking-[-0.06em] text-[var(--editable-page-text,#211713)]">{post.title}</h2>
-        {summary ? <p className="mt-4 line-clamp-3 text-sm font-semibold leading-7 text-[var(--editable-page-text,#211713)]/65">{summary}</p> : null}
-        <span className="mt-5 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] opacity-60 group-hover:opacity-100">Open result <ArrowRight className="h-4 w-4" /></span>
+        {!image ? <span className="inline-flex rounded-full bg-[var(--slot4-accent-soft)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--slot4-accent)]">{taskLabel}</span> : null}
+        <h2 className="editable-display mt-4 line-clamp-3 text-2xl font-bold leading-[1.08] tracking-[-0.02em] text-[var(--slot4-page-text)]">{post.title}</h2>
+        {summary ? <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-[var(--slot4-muted-text)]">{summary}</p> : null}
+        <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--slot4-accent)] transition group-hover:gap-3">Open result <ArrowRight className="h-4 w-4" /></span>
       </div>
     </Link>
   )
@@ -84,56 +91,73 @@ export default async function SearchPage({ searchParams }: { searchParams?: Prom
   const task = (resolved.task || '').trim().toLowerCase()
   const useMaster = resolved.master !== '0'
   const feed = await fetchSiteFeed(useMaster ? 1000 : 300, useMaster ? { fresh: true, category: category || undefined, task: task || undefined } : undefined)
-  const posts = feed?.posts?.length ? feed.posts : useMaster ? [] : SITE_CONFIG.tasks.filter((item) => item.enabled).flatMap((item) => getMockPostsForTask(item.key))
-  const results = posts.filter((post) => matches(post, normalized, category, task)).slice(0, normalized ? 80 : 36)
-  const enabledTasks = SITE_CONFIG.tasks.filter((item) => item.enabled)
+  const posts = feed?.posts?.length ? feed.posts : useMaster ? [] : SITE_CONFIG.tasks.filter((item) => item.enabled && !isUiHiddenTask(item.key)).flatMap((item) => getMockPostsForTask(item.key))
+  // Profile pages remain reachable by direct URL but are never surfaced in the
+  // search UI, so drop any profile-type results before rendering links.
+  const results = posts
+    .filter((post) => !isUiHiddenTask(getPostTaskKey(post) || ''))
+    .filter((post) => matches(post, normalized, category, task))
+    .slice(0, normalized ? 80 : 36)
+  const enabledTasks = SITE_CONFIG.tasks.filter((item) => item.enabled && !isUiHiddenTask(item.key))
 
   return (
     <EditableSiteShell>
-      <main className="min-h-screen bg-[var(--editable-page-bg,#fff7ee)] text-[var(--editable-page-text,#2f1d16)]">
-        <section className="mx-auto max-w-[var(--editable-container)] px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
-          <div className="grid gap-8 rounded-[2.5rem] border border-[var(--editable-border)] bg-white/70 p-6 shadow-[0_30px_90px_rgba(15,23,42,0.08)] backdrop-blur md:grid-cols-[0.8fr_1.2fr] lg:p-10">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.28em] opacity-55">{pagesContent.search.hero.badge}</p>
-              <h1 className="mt-5 text-5xl font-black leading-[0.92] tracking-[-0.08em] sm:text-7xl">{pagesContent.search.hero.title}</h1>
-              <p className="mt-6 max-w-xl text-base font-semibold leading-8 opacity-70">{pagesContent.search.hero.description}</p>
-            </div>
-            <form action="/search" className="self-end rounded-[2rem] border border-[var(--editable-border)] bg-[var(--editable-page-bg,#fff7ee)] p-4 sm:p-5">
-              <input type="hidden" name="master" value="1" />
-              <label className="flex items-center gap-3 rounded-2xl border border-[var(--editable-border)] bg-white px-4 py-3">
-                <Search className="h-5 w-5 opacity-45" />
-                <input name="q" defaultValue={query} placeholder={pagesContent.search.hero.placeholder} className="min-w-0 flex-1 bg-transparent text-base font-bold outline-none placeholder:text-current/35" />
-              </label>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="flex items-center gap-2 rounded-2xl border border-[var(--editable-border)] bg-white px-4 py-3">
-                  <Filter className="h-4 w-4 opacity-45" />
-                  <input name="category" defaultValue={category} placeholder="Category" className="min-w-0 flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-current/35" />
-                </label>
-                <select name="task" defaultValue={task} className="rounded-2xl border border-[var(--editable-border)] bg-white px-4 py-3 text-sm font-black outline-none">
-                  <option value="">All content types</option>
-                  {enabledTasks.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
-                </select>
+      <main className="min-h-screen bg-[var(--slot4-page-bg)] text-[var(--slot4-page-text)]">
+        <section className="mx-auto w-full max-w-[var(--editable-container)] px-5 py-12 sm:px-6 lg:px-8 lg:py-20">
+          <div
+            data-reveal
+            className="relative overflow-hidden rounded-[var(--editable-radius-lg)] border border-[var(--editable-border)] bg-[var(--slot4-surface-bg)] p-6 shadow-[0_1px_2px_rgba(14,15,26,0.05),0_30px_70px_-32px_rgba(14,15,26,0.25)] sm:p-10 lg:p-14"
+          >
+            <div className="pointer-events-none absolute -right-24 -top-20 h-[320px] w-[320px] rounded-full bg-[var(--slot4-accent)] opacity-[0.07] blur-[120px]" />
+            <div className="relative grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:gap-16">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[var(--slot4-accent)]">{pagesContent.search.hero.badge}</p>
+                <h1 className="editable-display mt-5 text-balance text-[2.75rem] font-bold leading-[1.04] tracking-[-0.03em] text-[var(--slot4-page-text)] sm:text-6xl">{pagesContent.search.hero.title}</h1>
+                <p className="mt-6 max-w-xl text-lg leading-relaxed text-[var(--slot4-muted-text)]">{pagesContent.search.hero.description}</p>
               </div>
-              <button className="mt-3 inline-flex h-12 w-full items-center justify-center rounded-2xl bg-[var(--editable-page-text,#2f1d16)] px-6 text-sm font-black uppercase tracking-[0.18em] text-[var(--editable-page-bg,#fff7ee)] transition hover:-translate-y-0.5" type="submit">Search</button>
-            </form>
+              <form action="/search" className="rounded-[var(--editable-radius)] border border-[var(--editable-border)] bg-[var(--slot4-panel-bg)] p-4 shadow-[0_18px_50px_-32px_rgba(14,15,26,0.45)] sm:p-5">
+                <input type="hidden" name="master" value="1" />
+                <label className="flex items-center gap-3 rounded-full border border-[var(--editable-border)] bg-[var(--slot4-surface-bg)] px-5 py-3 transition focus-within:border-[var(--slot4-accent)]">
+                  <Search className="h-5 w-5 shrink-0 text-[var(--slot4-soft-muted-text)]" />
+                  <input name="q" defaultValue={query} placeholder={pagesContent.search.hero.placeholder} className="min-w-0 flex-1 bg-transparent text-base text-[var(--slot4-page-text)] outline-none placeholder:text-[var(--slot4-soft-muted-text)]" />
+                </label>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label className="flex items-center gap-2 rounded-2xl border border-[var(--editable-border)] bg-[var(--slot4-surface-bg)] px-4 py-3 transition focus-within:border-[var(--slot4-accent)]">
+                    <Filter className="h-4 w-4 shrink-0 text-[var(--slot4-soft-muted-text)]" />
+                    <input name="category" defaultValue={category} placeholder="Category" className="min-w-0 flex-1 bg-transparent text-sm text-[var(--slot4-page-text)] outline-none placeholder:text-[var(--slot4-soft-muted-text)]" />
+                  </label>
+                  <select name="task" defaultValue={task} className="rounded-2xl border border-[var(--editable-border)] bg-[var(--slot4-surface-bg)] px-4 py-3 text-sm font-medium text-[var(--slot4-page-text)] outline-none transition focus:border-[var(--slot4-accent)]">
+                    <option value="">All content types</option>
+                    {enabledTasks.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
+                  </select>
+                </div>
+                <button className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--slot4-accent)] px-6 py-3.5 text-sm font-semibold text-[var(--slot4-on-accent)] transition hover:bg-[var(--slot4-accent-strong)]" type="submit">Search <ArrowRight className="h-4 w-4" /></button>
+              </form>
+            </div>
           </div>
 
-          <div className="mt-10 flex flex-wrap items-end justify-between gap-4">
+          <Ads slot="header" size="banner" className="mx-auto mt-10" showLabel eager />
+
+          <div data-reveal className="mt-14 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.24em] opacity-50">{results.length} results</p>
-              <h2 className="mt-2 text-3xl font-black tracking-[-0.06em]">{query ? `Results for “${query}”` : pagesContent.search.resultsTitle}</h2>
+              <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[var(--slot4-accent)]">{results.length} results</p>
+              <h2 className="editable-display mt-2 text-3xl font-bold tracking-[-0.03em] text-[var(--slot4-page-text)] sm:text-4xl">{query ? `Results for “${query}”` : pagesContent.search.resultsTitle}</h2>
             </div>
-            <Link href="/article" className="inline-flex items-center gap-2 rounded-full border border-[var(--editable-border)] bg-white px-5 py-3 text-sm font-black">Browse latest <ArrowRight className="h-4 w-4" /></Link>
+            <Link href="/article" className="inline-flex items-center gap-2 rounded-full border border-[var(--editable-border)] bg-[var(--slot4-surface-bg)] px-5 py-3 text-sm font-semibold text-[var(--slot4-page-text)] transition hover:border-[var(--slot4-accent)] hover:text-[var(--slot4-accent)]">Browse latest <ArrowRight className="h-4 w-4" /></Link>
           </div>
 
           {results.length ? (
-            <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {results.map((post, index) => <SearchResultCard key={post.id || post.slug} post={post} index={index} />)}
+
             </div>
           ) : (
-            <div className="mt-8 rounded-[2rem] border border-dashed border-[var(--editable-border)] bg-white/70 p-10 text-center">
-              <p className="text-2xl font-black tracking-[-0.04em]">No matching posts found.</p>
-              <p className="mt-3 text-sm font-semibold opacity-60">Try a different keyword, task type, or category.</p>
+            <div data-reveal className="mt-10 rounded-[var(--editable-radius)] border border-[var(--editable-border)] bg-[var(--slot4-panel-bg)] p-12 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--slot4-accent-soft)] text-[var(--slot4-accent)]">
+                <Search className="h-6 w-6" />
+              </div>
+              <p className="editable-display mt-6 text-2xl font-bold tracking-[-0.02em] text-[var(--slot4-page-text)]">No matching posts found.</p>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[var(--slot4-muted-text)]">Try a different keyword, task type, or category.</p>
             </div>
           )}
         </section>
