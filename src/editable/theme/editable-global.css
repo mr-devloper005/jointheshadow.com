@@ -8,11 +8,12 @@
   - Selection color
   - Scrollbar feel
   - Article body typography accents
+  - Site-wide scroll-reveal + entry motion
 
   Do not add data fetching, scripts, or route logic here.
 */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 /* Per-task display + body typefaces (consumed via task-themes.ts). */
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&family=Syne:wght@500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap');
@@ -22,11 +23,13 @@ body {
   background-color: var(--slot4-page-bg) !important;
   color: var(--slot4-page-text) !important;
   background-image: var(--slot4-body-gradient) !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .editable-site-root {
-  /* Yelp-style clean sans, used for both display and body. */
-  --editable-font-display: 'Inter', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  /* Plus Jakarta Sans for confident display headings, Inter for body. */
+  --editable-font-display: 'Plus Jakarta Sans', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
   --editable-font-body: 'Inter', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
   /* Premium easing curve used across every hover + transition. */
   --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
@@ -37,9 +40,12 @@ body {
   Site-wide premium motion.
 
   1. Unify the easing of every existing transition/hover to one refined curve.
-  2. Add a smooth "post open" entry animation that replays on each navigation
+  2. Add a smooth "page open" entry animation that replays on each navigation
      (driven by EditablePageMotion remounting the content per route).
-  Durations stay defined per-component via Tailwind utilities.
+  3. Provide a progressive-enhancement scroll-reveal system: elements tagged
+     with [data-reveal] fade/slide in as they enter the viewport. The hidden
+     start state only applies once JS marks the document `.reveal-ready`, so
+     content stays fully visible if JavaScript never runs.
 */
 .editable-site-root *,
 .editable-site-root *::before,
@@ -65,8 +71,48 @@ body {
   will-change: transform, opacity;
 }
 
+/* Scroll reveal — only arms when the document is `.reveal-ready` (set by JS). */
+.reveal-ready [data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0);
+  transition: opacity 0.8s var(--ease-premium), transform 0.8s var(--ease-premium);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: transform, opacity;
+}
+
+.reveal-ready [data-reveal].is-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+/* Infinite marquee for the trust / logo strip. */
+@keyframes editable-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.editable-marquee {
+  animation: editable-marquee 32s linear infinite;
+}
+
+.editable-marquee:hover {
+  animation-play-state: paused;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .editable-enter > * {
+    animation: none;
+  }
+  .reveal-ready [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .editable-marquee {
     animation: none;
   }
   .editable-site-root *,
@@ -97,8 +143,13 @@ body {
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--slot4-accent-fill) 28%, transparent);
+  background: color-mix(in oklab, var(--slot4-accent-fill) 26%, transparent);
   color: var(--slot4-page-text);
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
 }
 
 ::-webkit-scrollbar-track {
@@ -114,10 +165,53 @@ body {
   background: color-mix(in oklab, var(--slot4-accent) 68%, transparent);
 }
 
+/* Article body typography — premium long-form reading rhythm. */
 .article-content h2 {
-  color: var(--slot4-accent);
+  font-family: var(--editable-font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 2em;
+  margin-bottom: 0.6em;
+  color: var(--slot4-page-text);
+}
+
+.article-content h3 {
+  font-family: var(--editable-font-display);
+  font-weight: 600;
+  margin-top: 1.6em;
+  margin-bottom: 0.5em;
+}
+
+.article-content p {
+  margin-bottom: 1.15em;
 }
 
 .article-content a {
   color: var(--slot4-accent-fill);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.article-content ul,
+.article-content ol {
+  margin: 1.1em 0;
+  padding-left: 1.4em;
+}
+
+.article-content li {
+  margin-bottom: 0.5em;
+}
+
+.article-content blockquote {
+  margin: 1.6em 0;
+  padding-left: 1.25em;
+  border-left: 3px solid var(--slot4-accent);
+  font-style: italic;
+  color: var(--slot4-muted-text);
+}
+
+.article-content img {
+  border-radius: 1rem;
+  margin: 1.6em 0;
 }

@@ -4,6 +4,7 @@ import { SITE_CONFIG, type TaskKey } from '@/lib/site-config'
 import { buildPageMetadata } from '@/lib/seo'
 import { fetchHomeTaskFeed, fetchHomeTimeSections, type HomeTimeSection } from '@/lib/task-data'
 import { pagesContent } from '@/editable/content/pages.content'
+import { isUiHiddenTask } from '@/editable/content/global.content'
 import type { SitePost } from '@/lib/site-connector'
 import { EditableHomeCta, EditableHomeHero, EditableMagazineSplit, EditableStoryRail, EditableTimeCollections } from '@/editable/sections/HomeSections'
 import { EditableSiteShell } from '@/editable/shell/EditableSiteShell'
@@ -29,7 +30,11 @@ function uniquePosts(posts: SitePost[]) {
 }
 
 export default async function HomePage() {
-  const primaryTask = (SITE_CONFIG.tasks.find((task) => task.enabled)?.key || 'article') as TaskKey
+  // Center the public home on the first enabled task that is allowed in the UI
+  // (profile stays functional but hidden), so discovery leads with bookmarks.
+  const primaryTask = (SITE_CONFIG.tasks.find((task) => task.enabled && !isUiHiddenTask(task.key))?.key
+    || SITE_CONFIG.tasks.find((task) => task.enabled)?.key
+    || 'sbm') as TaskKey
   const primaryRoute = SITE_CONFIG.taskViews[primaryTask] || `/${primaryTask}`
   const taskFeed: TaskFeedItem[] = await fetchHomeTaskFeed(12, { timeoutMs: 2500 })
   const primaryPosts = uniquePosts(taskFeed.find(({ task }) => task.key === primaryTask)?.posts || taskFeed.flatMap(({ posts }) => posts)).slice(0, 24)
