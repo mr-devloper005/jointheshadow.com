@@ -1,19 +1,19 @@
 'use client'
 
-import { Building2, FileText, Image as ImageIcon, Mail, MapPin, Phone, Sparkles, Bookmark } from 'lucide-react'
+import { Building2, FileText, Image as ImageIcon, Mail, MapPin, Phone, Sparkles, Bookmark, ShieldCheck, Clock, MessageCircle } from 'lucide-react'
 import { pagesContent } from '@/editable/content/pages.content'
 import { getFactoryState } from '@/design/factory/get-factory-state'
 import { getProductKind } from '@/design/factory/get-product-kind'
 import { EditableContactLeadForm } from '@/editable/components/EditableContactLeadForm'
 import { EditableSiteShell } from '@/editable/shell/EditableSiteShell'
 
-const tone = {
-  shell: 'bg-[var(--slot4-page-bg)] text-[var(--slot4-page-text)]',
-  panel: 'border border-[var(--editable-border)] bg-[var(--slot4-surface-bg)]',
-  soft: 'border border-[var(--editable-border)] bg-[var(--slot4-panel-bg)]',
-  muted: 'text-[var(--slot4-muted-text)]',
-  action: 'bg-[var(--slot4-accent-fill)] text-[var(--slot4-on-accent)] hover:opacity-90',
-}
+const container = 'mx-auto w-full max-w-[var(--editable-container)] px-5 sm:px-6 lg:px-8'
+
+const reassurance = [
+  { icon: Clock, title: 'Fast response', body: 'We read every message and route it to the right person quickly.' },
+  { icon: ShieldCheck, title: 'No spam, ever', body: 'Your details are only used to reply to your request.' },
+  { icon: MessageCircle, title: 'Real humans', body: 'Thoughtful answers from the team behind the platform.' },
+]
 
 function getLanes(kind: ReturnType<typeof getProductKind>) {
   if (kind === 'directory') {
@@ -50,29 +50,60 @@ export default function ContactPage() {
   const lanes = getLanes(productKind)
 
   return (
-    <EditableSiteShell className={tone.shell}>
-      <main className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <section className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--slot4-accent)]">{pagesContent.contact.eyebrow}</p>
-            <h1 className="editable-display mt-4 text-5xl font-semibold tracking-[-0.02em]">{pagesContent.contact.title}</h1>
-            <p className={`mt-5 max-w-2xl text-sm leading-8 ${tone.muted}`}>{pagesContent.contact.description}</p>
-            <div className="mt-8 space-y-4">
-              {lanes.map((lane) => (
-                <div key={lane.title} className={`rounded-sm p-5 ${tone.soft}`}>
-                  <lane.icon className="h-5 w-5 text-[var(--slot4-accent)]" />
-                  <h2 className="editable-display mt-3 text-xl font-semibold">{lane.title}</h2>
-                  <p className={`mt-2 text-sm leading-7 ${tone.muted}`}>{lane.body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+    <EditableSiteShell>
+      <main className="relative overflow-hidden">
+        <div className="pointer-events-none absolute -left-40 top-0 h-[420px] w-[420px] rounded-full bg-[var(--slot4-accent)] opacity-[0.06] blur-[120px]" />
+        <div className={`${container} py-16 sm:py-20 lg:py-24`}>
+          <section className="grid gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start lg:gap-16">
+            {/* Left: intro + lanes */}
+            <div data-reveal>
+              <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[var(--slot4-accent)]">{pagesContent.contact.eyebrow}</p>
+              <h1 className="editable-display mt-4 text-[2.5rem] font-bold leading-[1.06] tracking-[-0.03em] text-[var(--slot4-page-text)] sm:text-5xl lg:text-[3.5rem]">
+                {pagesContent.contact.title}
+              </h1>
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-[var(--slot4-muted-text)]">{pagesContent.contact.description}</p>
 
-          <div className={`rounded-sm p-7 ${tone.panel}`}>
-            <h2 className="editable-display text-2xl font-semibold">{pagesContent.contact.formTitle}</h2>
-            <EditableContactLeadForm />
-          </div>
-        </section>
+              <div className="mt-10 grid gap-5 sm:grid-cols-2">
+                {lanes.map((lane, i) => (
+                  <div
+                    key={lane.title}
+                    data-reveal
+                    style={{ ['--reveal-delay' as string]: `${i * 80}ms` }}
+                    className="rounded-[var(--editable-radius)] border border-[var(--editable-border)] bg-[var(--slot4-surface-bg)] p-6 shadow-[0_1px_2px_rgba(14,15,26,0.05),0_12px_32px_-12px_rgba(14,15,26,0.12)] transition duration-500 hover:-translate-y-1.5 hover:shadow-[0_30px_70px_-28px_rgba(14,15,26,0.5)]"
+                  >
+                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--slot4-accent-soft)] text-[var(--slot4-accent)]">
+                      <lane.icon className="h-5 w-5" />
+                    </span>
+                    <h2 className="editable-display mt-5 text-lg font-bold tracking-[-0.01em]">{lane.title}</h2>
+                    <p className="mt-2 text-sm leading-7 text-[var(--slot4-muted-text)]">{lane.body}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                {reassurance.map((item) => (
+                  <span key={item.title} className="inline-flex items-center gap-2.5 rounded-full border border-[var(--editable-border)] bg-[var(--slot4-panel-bg)] px-4 py-2 text-sm font-medium text-[var(--slot4-muted-text)]">
+                    <item.icon className="h-4 w-4 text-[var(--slot4-accent)]" /> {item.title}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: form card */}
+            <div
+              data-reveal
+              style={{ ['--reveal-delay' as string]: '120ms' }}
+              className="rounded-[var(--editable-radius-lg)] border border-[var(--editable-border)] bg-[var(--slot4-surface-bg)] p-7 shadow-[0_1px_2px_rgba(14,15,26,0.05),0_24px_70px_-24px_rgba(14,15,26,0.45)] sm:p-9 lg:sticky lg:top-24"
+            >
+              <span className="inline-flex items-center gap-2 rounded-full bg-[var(--slot4-accent-soft)] px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--slot4-accent)]">
+                <Mail className="h-3.5 w-3.5" /> Get in touch
+              </span>
+              <h2 className="editable-display mt-5 text-2xl font-bold tracking-[-0.02em] sm:text-3xl">{pagesContent.contact.formTitle}</h2>
+              <p className="mt-2 text-sm leading-7 text-[var(--slot4-muted-text)]">Share a few details and we will get back to you.</p>
+              <EditableContactLeadForm />
+            </div>
+          </section>
+        </div>
       </main>
     </EditableSiteShell>
   )
